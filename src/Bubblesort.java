@@ -69,11 +69,10 @@ public class Bubblesort<T extends Comparable<T>> implements IOrdenator<T> {
 		return movimentacoes;
 	}
 	
-	private void iniciar() {
+	public void iniciar() {
 		inicio = System.nanoTime();
 	}
-	
-	private void terminar() {
+	public void terminar() {
 		termino = System.nanoTime();
 	}
 	
@@ -82,7 +81,7 @@ public class Bubblesort<T extends Comparable<T>> implements IOrdenator<T> {
 		
 		double tempoTotal;
 		
-	    tempoTotal = (termino - inicio) / 1_000_000;
+	    tempoTotal = (termino - inicio) / 1_000_000.0;
 	    return tempoTotal;
 	}
 }

@@ -135,7 +135,7 @@ public class Mergesort<T extends Comparable<T>> implements IOrdenator<T> {
 		
 		double tempoTotal;
 		
-	    tempoTotal = (termino - inicio) / 1_000_000;
+	    tempoTotal = (termino - inicio) / 1_000_000.0;
 	    return tempoTotal;
 	}
 }

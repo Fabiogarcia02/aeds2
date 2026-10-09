@@ -1,26 +1,28 @@
 import java.nio.charset.Charset;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.NoSuchElementException;
 import java.util.Scanner;
 import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
+import java.time.DateTimeException;
 
 public class App {
 
-	/** Nome do arquivo de dados. O arquivo deve estar localizado na raiz do projeto */
+	/** Caminho do arquivo de dados, informado por argumento ou localizado na raiz ou em src. */
     static String nomeArquivoDados;
     
     /** Scanner para leitura de dados do teclado */
     static Scanner teclado;
 
     /** Vetor de produtos cadastrados */
-    static Produto[] produtosCadastrados;
+    static Produto[] produtosCadastrados = new Produto[0];
 
     /** Quantidade de produtos cadastrados atualmente no vetor */
     static int quantosProdutos = 0;
 
-    static Bubblesort<Produto> ordenador;
+    static IOrdenator<Produto> ordenador;
 
     static void limparTela() {
         System.out.print("\033[H\033[2J");
@@ -30,7 +32,9 @@ public class App {
     /** Gera um efeito de pausa na CLI. Espera por um enter para continuar */
     static void pausa() {
         System.out.println("Digite enter para continuar...");
-        teclado.nextLine();
+        if (teclado.hasNextLine()) {
+            teclado.nextLine();
+        }
     }
 
     /** Cabeçalho principal da CLI do sistema */
@@ -44,8 +48,11 @@ public class App {
     	T valor;
         
     	System.out.println(mensagem);
+        if (!teclado.hasNextLine()) {
+            return null;
+        }
     	try {
-            valor = classe.getConstructor(String.class).newInstance(teclado.nextLine());
+            valor = classe.getConstructor(String.class).newInstance(teclado.nextLine().trim());
         } catch (InstantiationException | IllegalAccessException | IllegalArgumentException 
         		| InvocationTargetException | NoSuchMethodException | SecurityException e) {
             return null;
@@ -65,7 +72,15 @@ public class App {
         System.out.println("4 - Listar todos os produtos");
         System.out.println("0 - Finalizar");
         
-        return lerOpcao("Digite sua opção: ", Integer.class);
+        System.out.println("Digite sua opção: ");
+        if (!teclado.hasNextLine()) {
+            return 0;
+        }
+        try {
+            return Integer.parseInt(teclado.nextLine().trim());
+        } catch (NumberFormatException e) {
+            return -1;
+        }
     }
     
     /**
@@ -77,33 +92,24 @@ public class App {
      * @return Um vetor com os produtos carregados, ou vazio em caso de problemas de leitura.
      */
     static Produto[] lerProdutos(String nomeArquivoDados) {
-    	
-    	Scanner arquivo = null;
-    	int numProdutos;
-    	String linha;
-    	Produto produto;
-    	Produto[] produtosCadastrados;
-    	
-    	try {
-    		arquivo = new Scanner(new File(nomeArquivoDados), Charset.forName("UTF-8"));
-    		
-    		numProdutos = Integer.parseInt(arquivo.nextLine());
-    		produtosCadastrados = new Produto[numProdutos];
-    		
-    		for (int i = 0; i < numProdutos; i++) {
-    			linha = arquivo.nextLine();
-    			produto = Produto.criarDoTexto(linha);
-    			produtosCadastrados[i] = produto;
-    		}
-    		quantosProdutos = numProdutos;
-    		
-    	} catch (IOException excecaoArquivo) {
-    		produtosCadastrados = null;
-    	} finally {
-    		arquivo.close();
-    	}
-    	
-    	return produtosCadastrados;
+        quantosProdutos = 0;
+        try (Scanner arquivo = new Scanner(new File(nomeArquivoDados), Charset.forName("UTF-8"))) {
+            int numProdutos = Integer.parseInt(arquivo.nextLine().trim());
+            if (numProdutos < 0) {
+                throw new IllegalArgumentException("Quantidade de produtos não pode ser negativa.");
+            }
+            Produto[] produtos = new Produto[numProdutos];
+            for (int i = 0; i < numProdutos; i++) {
+                produtos[i] = Produto.criarDoTexto(arquivo.nextLine());
+            }
+            quantosProdutos = numProdutos;
+            return produtos;
+        } catch (IOException | IllegalArgumentException | NoSuchElementException
+                | IndexOutOfBoundsException | DateTimeException e) {
+            System.out.println("Não foi possível carregar os produtos de " + nomeArquivoDados
+                    + ": " + e.getMessage());
+            return new Produto[0];
+        }
     }
     
     static Produto localizarProduto() {
@@ -113,7 +119,10 @@ public class App {
     	
     	cabecalho();
     	System.out.println("Localizando um produto...");
-        int idProduto = lerOpcao("Digite o identificador do produto desejado: ", Integer.class);
+        Integer idProduto = lerOpcao("Digite o identificador do produto desejado: ", Integer.class);
+        if (idProduto == null) {
+            return null;
+        }
         for (int i = 0; (i < quantosProdutos && !localizado); i++) {
     		if (produtosCadastrados[i].hashCode() == idProduto) {
         		produto = produtosCadastrados[i];
@@ -127,7 +136,7 @@ public class App {
     private static void mostrarProduto(Produto produto) {
     	
         cabecalho();
-        String mensagem = "Dados inválidos para o produto!";
+        String mensagem = "Produto não encontrado ou identificador inválido!";
         
         if (produto != null){
             mensagem = String.format("Dados do produto:\n%s", produto);
@@ -140,10 +149,34 @@ public class App {
     	
         cabecalho();
         
-        ordenador = new Bubblesort<>();
+        System.out.println("1 - Bubblesort");
+        System.out.println("2 - Mergesort");
+        System.out.println("3 - Quicksort");
+        System.out.println("4 - Seleção");
+        System.out.println("5 - Inserção");
+        Integer opcao = lerOpcao("Escolha o algoritmo de ordenação: ", Integer.class);
+        if (opcao == null) {
+            System.out.println("Opção inválida!");
+            return;
+        }
+        IOrdenator<Produto> escolhido = switch (opcao) {
+            case 1 -> new Bubblesort<>();
+            case 2 -> new Mergesort<>();
+            case 3 -> new Quicksort<>();
+            case 4 -> new Selecao<>();
+            case 5 -> new Insercao<>();
+            default -> null;
+        };
+        if (escolhido == null) {
+            System.out.println("Opção inválida!");
+            return;
+        }
+        ordenador = escolhido;
 
         produtosCadastrados = ordenador.ordenar(produtosCadastrados);        
         System.out.println("Tempo gasto com a ordenação dos produtos: " + ordenador.getTempoOrdenacao() + " ms.");
+        System.out.println("Comparações: " + ordenador.getComparacoes());
+        System.out.println("Movimentações: " + ordenador.getMovimentacoes());
     }
 
     static void embaralharProdutos(){
@@ -156,13 +189,17 @@ public class App {
         cabecalho();
         System.out.println("\nProdutos cadastrados: ");
         for (int i = 0; i < quantosProdutos; i++) {
-        	System.out.println(String.format("%02d - %s", (i + 1), produtosCadastrados[i].toString()));
+            System.out.println(String.format("%02d - ID: %d - %s", (i + 1),
+                    produtosCadastrados[i].hashCode(), produtosCadastrados[i].toString()));
         }
     }
     
     public static void main(String[] args) {
 		teclado = new Scanner(System.in, Charset.forName("UTF-8"));
-        nomeArquivoDados = "produtos.txt";
+        nomeArquivoDados = args.length > 0 ? args[0] : "produtos.txt";
+        if (args.length == 0 && !new File(nomeArquivoDados).isFile()) {
+            nomeArquivoDados = "src/produtos.txt";
+        }
         produtosCadastrados = lerProdutos(nomeArquivoDados);
         
         int opcao = -1;
@@ -175,8 +212,11 @@ public class App {
                 case 3 -> embaralharProdutos();
                 case 4 -> listarTodosOsProdutos();
                 case 0 -> System.out.println("FLW VLW OBG VLT SMP.");
+                default -> System.out.println("Opção inválida!");
             }
-            pausa();
+            if (opcao != 0) {
+                pausa();
+            }
         } while (opcao != 0);       
 
         teclado.close();    
