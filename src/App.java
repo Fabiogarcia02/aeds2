@@ -29,7 +29,7 @@ public class App {
         System.out.flush();
     }
 
-    /** Gera um efeito de pausa na CLI. Espera por um enter para continuar */
+    
     static void pausa() {
         System.out.println("Digite enter para continuar...");
         if (teclado.hasNextLine()) {
@@ -37,7 +37,7 @@ public class App {
         }
     }
 
-    /** Cabeçalho principal da CLI do sistema */
+    
     static void cabecalho() {
         System.out.println("AEDs II COMÉRCIO DE COISINHAS");
         System.out.println("=============================");
@@ -82,7 +82,7 @@ public class App {
             return -1;
         }
     }
-    
+    //alteração
     /**
      * Lê os dados de um arquivo-texto e retorna um vetor de produtos. Arquivo-texto no formato
      * N  (quantidade de produtos) <br/>
